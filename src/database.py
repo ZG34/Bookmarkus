@@ -2,6 +2,7 @@ import sqlite3 as sql
 import bcrypt
 
 
+# bcrypt password hashing
 def hash_pw(password):
     hashed = bcrypt.hashpw(bytes(password, 'utf-8'), bcrypt.gensalt())
     password_hashed = hashed.decode('utf-8')
@@ -117,6 +118,9 @@ class Database:
     def view_bookmark_table(self, active_id, table="bookmarks"):
         for row in self.cursor.execute(f"SELECT rowid, * FROM {table} WHERE OwnerID = {active_id}"):
             print(row)
+
+    def remove_category(self, current_var):
+        pass
 
 
 if __name__ == '__main__':

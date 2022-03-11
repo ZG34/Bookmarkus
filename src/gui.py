@@ -5,6 +5,8 @@ from src.database import Database
 db = Database()
 
 BASE_FONT = ("Bookman Old Style", 10)
+
+# global user_id to allow id to be passed between tkinter frames
 user_id = None
 
 
@@ -42,6 +44,7 @@ class LoginInterface(tk.Tk):
         frame.tkraise()
 
 
+# landing page on launch
 class Login(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -88,7 +91,7 @@ class Login(tk.Frame):
         # self.password.bind("<Return>", login_func)
 
 
-# account creation
+# account creation page
 class CreateNew(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -143,9 +146,19 @@ class CreateNew(tk.Frame):
         self.home.grid(row=5, column=2, padx=5, pady=5)
 
 
+# bookmark entry page
 class EntryForm(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
+
+        def add_bookmark(event):
+            db.commit_bookmark(user_id, self.title.get(), self.link.get(), current_var.get(), )
+            self.title.delete(0, tk.END)
+            self.link.delete(0, tk.END)
+
+        def add_and_update_categories(event):
+            db.add_category(user_id, current_var.get())
+            self.category['values'] = db.category_populate()
 
         self.title_label = ttk.Label(self, text="Title: ")
         self.title_label.grid(row=0, column=0)
@@ -169,13 +182,13 @@ class EntryForm(tk.Frame):
         self.category['state'] = 'normal'
         self.category.grid(row=1, column=2)
 
-        self.save = ttk.Button(
+        self.save_category = ttk.Button(
             self,
             text="Add New Category",
             style="my.TButton",
-            command=lambda: db.add_category(user_id, current_var.get()),
+            command=lambda: add_and_update_categories(Login),
         )
-        self.save.grid(row=2, column=2)
+        self.save_category.grid(row=2, column=2)
 
         self.view_category_list = ttk.Button(
             self,
@@ -197,7 +210,7 @@ class EntryForm(tk.Frame):
             self,
             text="Add Bookmark",
             style="my.TButton",
-            command=lambda: db.commit_bookmark(user_id, self.title.get(), self.link.get(), current_var.get(),),
+            command=lambda: add_bookmark(Login),
         )
         self.commit_new_bookmark.grid(row=4, column=1)
 
