@@ -35,7 +35,8 @@ class LoginInterface(tk.Tk):
         for F in (Login,
                   CreateNew,
                   EntryForm,
-                  BookmarkAccess):
+                  BookmarkAccess,
+                  Reports):
             frame = F(container, self)
             self.frames[F] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -161,13 +162,8 @@ class EntryForm(tk.Frame):
         tk.Frame.__init__(self, parent)
 
         def view_bookmarks(event):
-            print(user_id)
-            # BookmarkAccess.title_query = db.title_populate(user_id)
-            # BookmarkAccess.title_choices = tk.StringVar(value=BookmarkAccess.title_query)
-            # BookmarkAccess.title_select = tk.Listbox(self, listvariable=BookmarkAccess.title_choices)
-            # BookmarkAccess.title_select.grid(row=2, column=0, padx=5, pady=10)
             # FIXME - close to working as intended
-            BookmarkAccess.title_filtering()
+            # BookmarkAccess.title_filtering()
             controller.show_frame(BookmarkAccess)
 
         def add_bookmark(event):
@@ -216,8 +212,6 @@ class EntryForm(tk.Frame):
             self,
             text="View Bookmarks",
             style="my.TButton",
-            # command=lambda: db.view_bookmark_table(user_id),
-            # command=lambda: controller.show_frame(BookmarkAccess),
             command=lambda: view_bookmarks(Login),
         )
         self.view_bookmarks.grid(row=5, column=1)
@@ -237,6 +231,14 @@ class EntryForm(tk.Frame):
             command=lambda: delete_category(Login),
         )
         self.delete_category.grid(row=4, column=2)
+
+        self.view_reporting = ttk.Button(
+            self,
+            text="View Reports",
+            style="my.TButton",
+            command=lambda: controller.show_frame(Reports),
+        )
+        self.view_reporting.grid(row=5, column=0)
 
         self.home = ttk.Button(
             self,
@@ -263,16 +265,6 @@ class BookmarkAccess(tk.Frame):
         self.title_filter = ttk.Entry(self)
         self.title_filter.grid(row=1, column=0, padx=5, pady=10)
 
-        # title select, listbox
-        def title_list(event):
-            self.title_select.destroy()
-            self.title_query = db.title_populate(user_id)
-            self.title_choices = tk.StringVar(value=self.title_query)
-            self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-            # self.title_select.grid(row=3, column=0, padx=5, pady=10)
-            # self.title_select.pack()
-            self.link['values'] = db.bookmarks_by_link(user_id)
-
         self.title_select = tk.Listbox(self)
         self.title_select.grid(row=3, column=0, padx=5, pady=10)
 
@@ -284,8 +276,14 @@ class BookmarkAccess(tk.Frame):
             self.title_select = tk.Listbox(self, listvariable=self.title_choices)
             self.title_select.grid(row=3, column=0, padx=5, pady=10)
             # self.title_select.pack()
-        self.title_filter.bind('<Return>', title_filtering)
+            # self.link['values'] = db.bookmarks_by_link(user_id) #method for populating link list
 
+        self.title_query = db.bookmarks_by_title(self.title_filter.get(), user_id)
+        self.title_choices = tk.StringVar(value=self.title_query)
+        self.title_select = tk.Listbox(self, listvariable=self.title_choices)
+        self.title_select.grid(row=3, column=0, padx=5, pady=10)
+
+        self.title_filter.bind('<Return>', title_filtering)
 
         self.title_button = ttk.Button(self, style='my.TButton', text="Filter Title",
                                        command=lambda: title_filtering(Login))
@@ -300,10 +298,7 @@ class BookmarkAccess(tk.Frame):
                                    command=lambda: select_link(Login))
         open_selected.grid(row=4, column=0, padx=5, pady=10)
 
-        # ability to filter the listbox: by title, by link source, by category
-        # filtering by link source will require parsing between www. and .site
-
-        # category filter will be a combobox, with typing in new categories disabled
+        # category filtering
         self.category_label = ttk.Label(self, text="Filter by Category: ")
         self.category_label.grid(row=0, column=3)
 
@@ -316,10 +311,14 @@ class BookmarkAccess(tk.Frame):
         def category_select(event):
             self.title_select.destroy()
             self.title_query = db.bookmarks_by_category(category_var.get(), user_id)
-            self.title_choices = tk.StringVar(value=self.title_query)
-            self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-            self.title_select.grid(row=3, column=0, padx=5, pady=10)
-            # self.title_select.pack()
+            if self.title_query:
+                self.title_choices = tk.StringVar(value=self.title_query)
+                self.title_select = tk.Listbox(self, listvariable=self.title_choices)
+                self.title_select.grid(row=3, column=0, padx=5, pady=10)
+            else:
+                self.title_choices = tk.StringVar(value=db.title_populate(user_id))
+                self.title_select = tk.Listbox(self, listvariable=self.title_choices)
+                self.title_select.grid(row=3, column=0, padx=5, pady=10)
 
         self.filter_category = ttk.Button(self, style='my.TButton', text="Filter by Category",
                                           command=lambda: category_select(Login))
@@ -331,8 +330,10 @@ class BookmarkAccess(tk.Frame):
 
         link_var = tk.StringVar()
         self.link = ttk.Combobox(self, textvariable=link_var)
+
         def link_populate(event):
-            self.link['values'] = db.bookmarks_by_link(user_id)         # FIXME
+            self.link['values'] = db.bookmarks_by_link(user_id)  # FIXME
+
         self.link['state'] = 'readonly'
         self.link.grid(row=1, column=2, padx=5, pady=10)
 
@@ -348,6 +349,9 @@ class BookmarkAccess(tk.Frame):
         )
         self.home.grid(row=4, column=2, padx=5, pady=10)
 
+    # title_select = tk.Listbox()
+    # title_select.grid(row=3, column=0, padx=5, pady=20)
+
     @classmethod
     def title_filtering(cls):
         title_query = db.title_populate(user_id)
@@ -355,7 +359,25 @@ class BookmarkAccess(tk.Frame):
         title_choices = tk.StringVar(value=title_query)
         title_select = tk.Listbox(listvariable=title_choices)
         # title_select.pack()
-        title_select.grid(row=3, column=0, padx=5, pady=10)
+        # title_select.grid(row=0, column=1, padx=5, pady=40)
+        title_select.grid(row=3, column=0, padx=5, pady=20)
+
+        open_selected = ttk.Button(style='my.TButton', text="Open Selected",
+                                   command=lambda: select_link())
+        open_selected.grid(row=4, column=0, padx=5, pady=10)
+
+        def select_link():
+            title = str(title_select.get("active")).strip("(' ',)")
+            db.open_link(title)
+
+    def title_filtering1(self, event=None):
+        self.title_query = db.bookmarks_by_title(self.title_filter.get(), user_id)
+        self.title_choices.set(self.title_query)
+
+
+class Reports(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
 
 
 app = LoginInterface()
