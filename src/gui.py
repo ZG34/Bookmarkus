@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -46,6 +47,7 @@ class LoginInterface(tk.Tk):
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
+        frame.event_generate('<<Raised>>')
 
 
 # landing page on launch
@@ -95,6 +97,14 @@ class Login(tk.Frame):
             command=lambda: controller.show_frame(CreateNew),
         )
         self.create_new.grid(row=4, column=2, pady=10)
+
+        self.test = ttk.Button(
+            self,
+            text="test",
+            style="my.TButton",
+            command=lambda: db.print_all(),
+        )
+        self.test.grid(row=5, column=2, pady=10)
 
         self.username.bind("<Return>", login_function)
         self.password.bind("<Return>", login_function)
@@ -162,31 +172,44 @@ class EntryForm(tk.Frame):
         tk.Frame.__init__(self, parent)
 
         def view_bookmarks(event):
-            # FIXME - close to working as intended
-            # BookmarkAccess.title_filtering()
             controller.show_frame(BookmarkAccess)
 
         def add_bookmark(event):
-            db.commit_bookmark(user_id, self.title.get(), self.link.get(), current_var.get(), )
-            self.title.delete(0, tk.END)
-            self.link.delete(0, tk.END)
+            if db.commit_bookmark(user_id, self.title.get(), self.link.get(), current_var.get(), ) is False:
+                self.failed_commit = ttk.Label(self, text="An entry field is missing!")
+                self.failed_commit.grid(row=7, column=1)
+            else:
+                self.title.delete(0, tk.END)
+                self.link.delete(0, tk.END)
+                try:
+                    self.failed_commit.destroy()
+                except AttributeError as e:
+                    print(e)
 
         def add_and_update_categories(event):
-            db.add_category(user_id, current_var.get())
-            self.category['values'] = db.category_populate()  # refreshes combobox contents
+            if db.add_category(user_id, current_var.get()) is False:
+                self.failed_commit = ttk.Label(self, text="Category can not be added: none is entered",
+                                               wraplength=120, justify='center')
+                self.failed_commit.grid(row=6, column=1)
+            else:
+                self.category['values'] = db.category_populate1()  # refreshes combobox contents
+                try:
+                    self.failed_commit.destroy()
+                except AttributeError as e:
+                    print(e)
 
         def delete_category(event):
             db.remove_category(current_var.get())
-            self.category['values'] = db.category_populate()
+            self.category['values'] = db.category_populate1()
 
         self.title_label = ttk.Label(self, text="Title: ")
-        self.title_label.grid(row=0, column=0)
+        self.title_label.grid(row=0, column=0, padx=5, pady=10)
 
         self.link_label = ttk.Label(self, text="Link: ")
-        self.link_label.grid(row=0, column=1)
+        self.link_label.grid(row=0, column=1, padx=5, pady=10)
 
         self.category_label = ttk.Label(self, text="Category: ")
-        self.category_label.grid(row=0, column=2)
+        self.category_label.grid(row=0, column=2, padx=5, pady=10)
 
         self.title = ttk.Entry(self)
         self.title.grid(row=1, column=0, padx=5, pady=10)
@@ -196,7 +219,7 @@ class EntryForm(tk.Frame):
 
         current_var = tk.StringVar()
         self.category = ttk.Combobox(self, textvariable=current_var)
-        self.category['values'] = db.category_populate()
+        self.category['values'] = db.category_populate1()
         self.category['state'] = 'normal'
         self.category.grid(row=1, column=2, padx=5, pady=10)
 
@@ -206,7 +229,7 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: add_and_update_categories(Login),
         )
-        self.save_category.grid(row=2, column=2)
+        self.save_category.grid(row=2, column=2, padx=5, pady=10)
 
         self.view_bookmarks = ttk.Button(
             self,
@@ -214,7 +237,7 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: view_bookmarks(Login),
         )
-        self.view_bookmarks.grid(row=5, column=1)
+        self.view_bookmarks.grid(row=6, column=1, padx=5, pady=10)
 
         self.commit_new_bookmark = ttk.Button(
             self,
@@ -222,15 +245,15 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: add_bookmark(Login),
         )
-        self.commit_new_bookmark.grid(row=2, column=1)
+        self.commit_new_bookmark.grid(row=2, column=1, padx=5, pady=10)
 
         self.delete_category = ttk.Button(
             self,
-            text="Delete Selected",
+            text="Delete Category",
             style="my.TButton",
             command=lambda: delete_category(Login),
         )
-        self.delete_category.grid(row=4, column=2)
+        self.delete_category.grid(row=4, column=2, padx=5, pady=10)
 
         self.view_reporting = ttk.Button(
             self,
@@ -238,7 +261,7 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: controller.show_frame(Reports),
         )
-        self.view_reporting.grid(row=5, column=0)
+        self.view_reporting.grid(row=6, column=0, padx=5, pady=10)
 
         self.home = ttk.Button(
             self,
@@ -246,16 +269,26 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: controller.show_frame(Login),
         )
-        self.home.grid(row=5, column=2)
+        self.home.grid(row=6, column=2, padx=5, pady=10)
+
+        # self.bind('<<Raised>>', self.category_pop)   # FIXME
+
+    # FIXME
+    def category_listpop(self, event=None):
+        global user_id
+        print(user_id)
+        self.category['values'] = db.category_populate(user_id)
 
 
 class BookmarkAccess(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        self.title_query = None
+
         def logout(event):
             controller.show_frame(Login)
-            self.title_select.destroy()
+            self.title_select.update()
             self.title_filter.delete(0, tk.END)
 
         self.title_label = ttk.Label(self, text="Filter by Title: ")
@@ -265,68 +298,32 @@ class BookmarkAccess(tk.Frame):
         self.title_filter = ttk.Entry(self)
         self.title_filter.grid(row=1, column=0, padx=5, pady=10)
 
-        self.title_select = tk.Listbox(self)
-        self.title_select.grid(row=3, column=0, padx=5, pady=10)
-
-        # title filter
-        def title_filtering(event):
-            self.title_select.destroy()
-            self.title_query = db.bookmarks_by_title(self.title_filter.get(), user_id)
-            self.title_choices = tk.StringVar(value=self.title_query)
-            self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-            self.title_select.grid(row=3, column=0, padx=5, pady=10)
-            # self.title_select.pack()
-            # self.link['values'] = db.bookmarks_by_link(user_id) #method for populating link list
-
-        self.title_query = db.bookmarks_by_title(self.title_filter.get(), user_id)
-        self.title_choices = tk.StringVar(value=self.title_query)
+        self.title_choices = tk.StringVar()
         self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-        self.title_select.grid(row=3, column=0, padx=5, pady=10)
+        self.title_select.grid(row=3, column=0, padx=5, pady=10, columnspan=3, sticky='WE')
 
-        self.title_filter.bind('<Return>', title_filtering)
+        self.title_filter.bind('<Return>', self.title_filtering)
 
         self.title_button = ttk.Button(self, style='my.TButton', text="Filter Title",
-                                       command=lambda: title_filtering(Login))
+                                       command=self.title_filtering)
         self.title_button.grid(row=2, column=0, padx=5, pady=10)
-
-        # hyperlink access
-        def select_link(event):
-            title = str(self.title_select.get("active")).strip("(' ',)")
-            db.open_link(title)
-
-        open_selected = ttk.Button(self, style='my.TButton', text="Open Selected",
-                                   command=lambda: select_link(Login))
-        open_selected.grid(row=4, column=0, padx=5, pady=10)
 
         # category filtering
         self.category_label = ttk.Label(self, text="Filter by Category: ")
-        self.category_label.grid(row=0, column=3)
+        self.category_label.grid(row=0, column=2)
 
-        category_var = tk.StringVar()
-        self.category = ttk.Combobox(self, textvariable=category_var)
-        self.category['values'] = db.category_populate()
+        self.category_var = tk.StringVar()
+        self.category = ttk.Combobox(self, textvariable=self.category_var)
         self.category['state'] = 'readonly'
-        self.category.grid(row=1, column=3, padx=5, pady=10)
-
-        def category_select(event):
-            self.title_select.destroy()
-            self.title_query = db.bookmarks_by_category(category_var.get(), user_id)
-            if self.title_query:
-                self.title_choices = tk.StringVar(value=self.title_query)
-                self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-                self.title_select.grid(row=3, column=0, padx=5, pady=10)
-            else:
-                self.title_choices = tk.StringVar(value=db.title_populate(user_id))
-                self.title_select = tk.Listbox(self, listvariable=self.title_choices)
-                self.title_select.grid(row=3, column=0, padx=5, pady=10)
+        self.category.grid(row=1, column=2, padx=5, pady=10)
 
         self.filter_category = ttk.Button(self, style='my.TButton', text="Filter by Category",
-                                          command=lambda: category_select(Login))
-        self.filter_category.grid(row=2, column=3, padx=5, pady=10)
+                                          command=self.category_filtering)
+        self.filter_category.grid(row=2, column=2, padx=5, pady=10)
 
         # link filter: combobox with the parsed sites currently in the database?
         self.link_label = ttk.Label(self, text="Filter by Source: ")
-        self.link_label.grid(row=0, column=2)
+        self.link_label.grid(row=0, column=1)
 
         link_var = tk.StringVar()
         self.link = ttk.Combobox(self, textvariable=link_var)
@@ -335,44 +332,65 @@ class BookmarkAccess(tk.Frame):
             self.link['values'] = db.bookmarks_by_link(user_id)  # FIXME
 
         self.link['state'] = 'readonly'
-        self.link.grid(row=1, column=2, padx=5, pady=10)
+        self.link.grid(row=1, column=1, padx=5, pady=10)
 
         link_filter = ttk.Button(self, style="my.TButton", text="Filter by Source",
                                  command=lambda: link_populate(Login))
-        link_filter.grid(row=2, column=2, padx=5, pady=10)
+        link_filter.grid(row=2, column=1, padx=5, pady=10)
 
-        self.home = ttk.Button(
+        # hyperlink access
+        def select_link(event):
+            title = str(self.title_select.get("active")).strip("(' ',)")
+            db.open_link(title)
+
+        open_selected = ttk.Button(self, style='my.TButton', text="Open Selected",
+                                   command=lambda: select_link(Login))
+        open_selected.grid(row=4, column=1, padx=5, pady=10)
+
+        def delete_bookmark(event):
+            title = self.title_select.get("active")
+            realtitle = title[0]
+            db.delete_bookmark(realtitle)
+            self.title_filtering()
+
+        delete_selected = ttk.Button(self, style='my.TButton', text="Delete Selected",
+                                     command=lambda: delete_bookmark(Login))
+        delete_selected.grid(row=5, column=1, padx=5, pady=10)
+
+        self.logout = ttk.Button(
             self,
             text="Logout",
             style="my.TButton",
             command=lambda: logout(Login),
         )
-        self.home.grid(row=4, column=2, padx=5, pady=10)
+        self.logout.grid(row=4, column=2, padx=5, pady=10)
 
-    # title_select = tk.Listbox()
-    # title_select.grid(row=3, column=0, padx=5, pady=20)
+        self.back = ttk.Button(
+            self,
+            text="<- Go Back",
+            style="my.TButton",
+            command=lambda: controller.show_frame(EntryForm),
+        )
+        self.back.grid(row=4, column=0, padx=5, pady=10)
 
-    @classmethod
-    def title_filtering(cls):
-        title_query = db.title_populate(user_id)
-        print(title_query)
-        title_choices = tk.StringVar(value=title_query)
-        title_select = tk.Listbox(listvariable=title_choices)
-        # title_select.pack()
-        # title_select.grid(row=0, column=1, padx=5, pady=40)
-        title_select.grid(row=3, column=0, padx=5, pady=20)
+        # TODO make use of this method in each class, to get a clean refresh or update.
+        self.bind('<<Raised>>', self.title_filtering, add="+")
+        self.bind('<<Raised>>', self.category_pop, add="+")
 
-        open_selected = ttk.Button(style='my.TButton', text="Open Selected",
-                                   command=lambda: select_link())
-        open_selected.grid(row=4, column=0, padx=5, pady=10)
-
-        def select_link():
-            title = str(title_select.get("active")).strip("(' ',)")
-            db.open_link(title)
-
-    def title_filtering1(self, event=None):
+    def title_filtering(self, event=None):
         self.title_query = db.bookmarks_by_title(self.title_filter.get(), user_id)
         self.title_choices.set(self.title_query)
+
+    def category_filtering(self, event=None):
+        self.title_query = db.bookmarks_by_category(self.category_var.get(), user_id)
+        if self.title_query:
+            self.title_choices.set(self.title_query)
+        else:
+            self.title_choices.set(db.title_populate(user_id))
+
+    def category_pop(self, event=None):
+        print(user_id)
+        self.category['values'] = db.category_populate(user_id)
 
 
 class Reports(tk.Frame):

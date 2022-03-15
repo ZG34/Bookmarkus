@@ -28,22 +28,12 @@ class Database:
         except sql.OperationalError:
             pass
 
-        try:
-            self.cursor.execute(
-                """CREATE TABLE IF NOT EXISTS notes
-                (OwnerID INTEGER NOT NULL,
-                Data TEXT NULL)
-                ;"""
-            )
-            self.connection.commit()
-        except sql.OperationalError:
-            pass
-
+        # FIXME TESTING: Unique constraint
         try:
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS category
                 (OwnerID INTEGER NOT NULL,
-                Data TEXT NOT NULL)
+                Data TEXT NOT NULL UNIQUE)
                 ;"""
             )
             self.connection.commit()
@@ -105,7 +95,12 @@ class Database:
             print("len below 0")
             return False
 
-    def category_populate(self):
+    def category_populate(self, active_id):
+        self.cursor.execute("SELECT Data FROM category WHERE OwnerID=(?)", (active_id,))
+        # self.cursor.execute("SELECT * FROM category")
+        return self.cursor.fetchall()
+
+    def category_populate1(self):
         self.cursor.execute("SELECT Data FROM category")
         return self.cursor.fetchall()
 
@@ -115,6 +110,7 @@ class Database:
             self.connection.commit()
         else:
             print("please enter a category")
+            return False
 
     def get_user_id(self, username):
         self.cursor.execute("SELECT rowid FROM users WHERE username = (?)", (username,))
@@ -128,11 +124,13 @@ class Database:
             self.connection.commit()
         else:
             print("nothing to bookmark")
+            return False
 
     def view_bookmark_table(self, active_id, table="bookmarks"):
         for row in self.cursor.execute(f"SELECT rowid, * FROM {table} WHERE OwnerID = {active_id}"):
             print(row)
 
+    # fixme will not delete multi-word category
     def remove_category(self, current_var):
         self.cursor.execute("DELETE FROM category WHERE Data=(?)", (current_var,))
         self.connection.commit()
@@ -159,11 +157,37 @@ class Database:
     def bookmarks_by_link(self, active_id):
         self.cursor.execute("SELECT Link FROM bookmarks WHERE OwnerID = (?)", (active_id,))
         raw = self.cursor.fetchall()
+        return raw
+        # print(raw)
+        # for item in raw:
+        #     print(item)
+            # return item
+        # print(raw)
         # return str(raw).replace("https://www.", "")
         # print(str(raw).replace("https://www.", ""))
         # slicing = slice(6)
         # print(raw[slicing])
-        return raw
+
+    def bookmarks_link_populate(self, active_id):
+        pass
+        # pull all URLs from database
+        # parse all URL for the source site (ex, www.youtube.com -> youtube)
+        # select only 1 instance of each unique source site
+        # populate combo box with 1 instance of each unique source site
+
+    def bookmarks_by_link_REAL(self, choice, active_id):
+        pass
+        # choice =  link_var.get()
+        # "SELECT Title FROM bookmarks WHERE Link LIKE (?) AND OwnerID=(?)", (choice, active_id,)
+
+    def delete_bookmark(self, active_selection):
+        self.cursor.execute("DELETE FROM bookmarks WHERE Title=(?)", (active_selection,))
+        # raw = self.cursor.fetchone()[0]
+        self.connection.commit()
+
+    def print_all(self, table='category'):
+        self.cursor.execute(f"SELECT * FROM {table}")
+        print(self.cursor.fetchall())
 
 
 if __name__ == '__main__':
