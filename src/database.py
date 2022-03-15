@@ -137,8 +137,8 @@ class Database:
         self.cursor.execute("DELETE FROM category WHERE Data=(?)", (current_var,))
         self.connection.commit()
 
-    def title_populate(self):
-        self.cursor.execute("SELECT Title FROM bookmarks")
+    def title_populate(self, active_id):
+        self.cursor.execute("SELECT Title FROM bookmarks WHERE OwnerID = (?)", (active_id,))
         return self.cursor.fetchall()
 
     def open_link(self, active_selection):
@@ -146,6 +146,24 @@ class Database:
         raw = self.cursor.fetchone()[0]             # simply storing the return in a variable converts to a string?
         print(type(raw))
         webbrowser.open(raw)
+
+    def bookmarks_by_category(self, param, active_id):
+        self.cursor.execute("SELECT Title FROM bookmarks WHERE category = (?) AND OwnerID=(?)", (param, active_id))
+        return self.cursor.fetchall()
+
+    def bookmarks_by_title(self, param, active_id):
+        self.cursor.execute("SELECT Title FROM bookmarks WHERE Title LIKE (?) AND OwnerID=(?)",
+                            ('%'+param+'%', active_id,))
+        return self.cursor.fetchall()
+
+    def bookmarks_by_link(self, active_id):
+        self.cursor.execute("SELECT Link FROM bookmarks WHERE OwnerID = (?)", (active_id,))
+        raw = self.cursor.fetchall()
+        # return str(raw).replace("https://www.", "")
+        # print(str(raw).replace("https://www.", ""))
+        # slicing = slice(6)
+        # print(raw[slicing])
+        return raw
 
 
 if __name__ == '__main__':

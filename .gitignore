@@ -276,3 +276,11 @@ cython_debug/
 #.idea/
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm,python
+src/test1.py
+src/test2.py
+src/test_test1.py
+src/__init__.py
+src/testing.db
+src/test4.py
+src/test3.py
+src/test5.py
