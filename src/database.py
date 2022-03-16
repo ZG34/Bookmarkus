@@ -28,7 +28,6 @@ class Database:
         except sql.OperationalError:
             pass
 
-        # FIXME TESTING: Unique constraint
         try:
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS category
@@ -97,12 +96,7 @@ class Database:
 
     def category_populate(self, active_id):
         self.cursor.execute("SELECT Data FROM category WHERE OwnerID=(?)", (active_id,))
-        # self.cursor.execute("SELECT * FROM category")
         return self.cursor.fetchall()
-
-    # def category_populate1(self):
-    #     self.cursor.execute("SELECT Data FROM category")
-    #     return self.cursor.fetchall()
 
     def add_category(self, active_id, current_var):
         if len(current_var) != 0:
@@ -130,7 +124,6 @@ class Database:
         for row in self.cursor.execute(f"SELECT rowid, * FROM {table} WHERE OwnerID = {active_id}"):
             print(row)
 
-    # fixme will not delete multi-word category
     def remove_category(self, current_var):
         self.cursor.execute("DELETE FROM category WHERE Data=(?)", (current_var,))
         self.connection.commit()

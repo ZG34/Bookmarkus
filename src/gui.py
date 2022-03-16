@@ -3,14 +3,15 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from src.database import Database
+import src.reporting as report
 
+report.report_table()
 db = Database()
 
 BASE_FONT = ("Bookman Old Style", 10)
 
 # global user_id to allow id to be passed between tkinter frames
 user_id = None
-login_count = 0
 
 
 # contains tkinter setup logic, to allow for switching frames
@@ -66,13 +67,11 @@ class Login(tk.Frame):
 
         def login_function(event):
             if db.login_func(self.password.get(), (self.username.get())) is True:
-                # controller.show_frame(EntryForm)
                 controller.show_frame(Reports)
                 global user_id
                 user_id = db.get_user_id(self.username.get())
-                global login_count
-                login_count += 1
-                print(login_count)
+                login_count = 1
+                report.login_logging(user_id, login_count)
                 self.password.delete(0, tk.END)
                 try:
                     self.label3.destroy()
@@ -294,6 +293,13 @@ class BookmarkAccess(tk.Frame):
             global user_id
             user_id = None
 
+        # hyperlink access
+        def select_link(event):
+            title = str(self.title_select.get("active")).strip("(' ',)")
+            db.open_link(title)
+            bookmark_open_count = 1
+            report.access_logging(user_id, bookmark_open_count)
+
         self.title_label = ttk.Label(self, text="Filter by Title: ")
         self.title_label.grid(row=0, column=0)
 
@@ -340,11 +346,6 @@ class BookmarkAccess(tk.Frame):
         # link_filter = ttk.Button(self, style="my.TButton", text="Filter by Source",
         #                          command=lambda: link_populate(Login))
         # link_filter.grid(row=2, column=1, padx=5, pady=10)
-
-        # hyperlink access
-        def select_link(event):
-            title = str(self.title_select.get("active")).strip("(' ',)")
-            db.open_link(title)
 
         open_selected = ttk.Button(self, style='my.TButton', text="Open Selected",
                                    command=lambda: select_link(Login))
@@ -408,12 +409,20 @@ class Reports(tk.Frame):
 
         def logout(event):
             controller.show_frame(Login)
+            logoutvar = tk.StringVar()
+            self.bookmark_count_label.config(textvariable=logoutvar)
+            self.login_count_label.config(textvariable=logoutvar)
+            self.open_count_label.config(textvariable=logoutvar)
             global user_id
             user_id = None
 
         def populate_report(event):
-            bvar.set(f"You have\n --{db.count_user_bookmarks(user_id)}-- \ntotal bookmarks saved!")
-            lvar.set()
+            self.bookmark_count_label.config(textvariable=bvar)
+            self.login_count_label.config(textvariable=lvar)
+            self.open_count_label.config(textvariable=ovar)
+            bvar.set(f"You have\n --{db.count_user_bookmarks(user_id)}-- \ntotal bookmarks")
+            lvar.set(f"Logged in\n --{report.login_count(user_id)}-- \ntotal times")
+            ovar.set(f"Accessed bookmarks\n --{report.show_access(user_id)}-- \ntimes")
 
         self.go_entry = ttk.Button(
             self,
@@ -446,6 +455,10 @@ class Reports(tk.Frame):
         lvar = tk.StringVar()
         self.login_count_label = ttk.Label(self, textvariable=lvar)
         self.login_count_label.grid(row=2, column=1, padx=5, pady=10)
+
+        ovar = tk.StringVar()
+        self.open_count_label = ttk.Label(self, textvariable=ovar)
+        self.open_count_label.grid(row=2, column=2, padx=5, pady=10)
 
         self.logout = ttk.Button(
             self,
