@@ -100,9 +100,9 @@ class Database:
         # self.cursor.execute("SELECT * FROM category")
         return self.cursor.fetchall()
 
-    def category_populate1(self):
-        self.cursor.execute("SELECT Data FROM category")
-        return self.cursor.fetchall()
+    # def category_populate1(self):
+    #     self.cursor.execute("SELECT Data FROM category")
+    #     return self.cursor.fetchall()
 
     def add_category(self, active_id, current_var):
         if len(current_var) != 0:
@@ -142,7 +142,6 @@ class Database:
     def open_link(self, active_selection):
         self.cursor.execute(f"SELECT Link FROM bookmarks WHERE Title=(?)", (active_selection,))
         raw = self.cursor.fetchone()[0]             # simply storing the return in a variable converts to a string?
-        print(type(raw))
         webbrowser.open(raw)
 
     def bookmarks_by_category(self, param, active_id):
@@ -156,17 +155,11 @@ class Database:
 
     def bookmarks_by_link(self, active_id):
         self.cursor.execute("SELECT Link FROM bookmarks WHERE OwnerID = (?)", (active_id,))
-        raw = self.cursor.fetchall()
-        return raw
-        # print(raw)
-        # for item in raw:
-        #     print(item)
-            # return item
-        # print(raw)
-        # return str(raw).replace("https://www.", "")
-        # print(str(raw).replace("https://www.", ""))
-        # slicing = slice(6)
-        # print(raw[slicing])
+        # raw = self.cursor.fetchall()
+        raw = ([x[0] for x in self.cursor.fetchall()])
+        for item in raw:
+            stripped = (str(item).strip("https://" + ".com" + "www." + "http://" + ".net"))
+            print(stripped)
 
     def bookmarks_link_populate(self, active_id):
         pass
@@ -185,9 +178,14 @@ class Database:
         # raw = self.cursor.fetchone()[0]
         self.connection.commit()
 
-    def print_all(self, table='category'):
+    def print_all(self, table='bookmarks'):
         self.cursor.execute(f"SELECT * FROM {table}")
         print(self.cursor.fetchall())
+
+    def count_user_bookmarks(self, active_id):
+        self.cursor.execute("SELECT rowid FROM bookmarks WHERE OwnerID=(?)", (active_id,))
+        count = len([x[0] for x in self.cursor.fetchall()])
+        return count
 
 
 if __name__ == '__main__':
