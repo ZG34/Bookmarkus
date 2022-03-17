@@ -34,7 +34,6 @@ def count_user_bookmarks(active_id):
 def access_logging(active_id, count):
     num = ([x[0] for x in db.cursor.execute("SELECT link_opens FROM reports WHERE OwnerID=(?)", (active_id,))])
     new_count = num[0] + count
-    print(new_count)
     db.cursor.execute("UPDATE reports SET link_opens=(?) WHERE OwnerID=(?)", (new_count, active_id))
     db.connection.commit()
 
@@ -53,7 +52,6 @@ def login_logging(active_id, count):
     except sqlite3.IntegrityError as e:
         num = ([x[0] for x in db.cursor.execute("SELECT login_count FROM reports WHERE OwnerID=(?)", (active_id,))])
         new_count = num[0] + count
-        print(new_count)
         db.cursor.execute("UPDATE reports SET login_count=(?) WHERE OwnerID=(?)", (new_count, active_id,))
         db.connection.commit()
         print("ran update")

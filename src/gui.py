@@ -1,4 +1,4 @@
-import time
+import sys
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -26,10 +26,9 @@ class LoginInterface(tk.Tk):
         label_styling = ttk.Style()
         label_styling.configure("my.TLabel", font=BASE_FONT)
 
-        tk.Tk.wm_title(self, "Login Screen")
+        tk.Tk.wm_title(self, "BookMarkus")
 
         container = tk.Frame(self)
-        # container.pack(side="top", fill="both", expand=True)
         container.grid_configure(sticky='nsew')
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
@@ -37,7 +36,7 @@ class LoginInterface(tk.Tk):
         menubar = tk.Menu(container)
         filemenu = tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Export Bookmarks", command=lambda: export.export_bookmarks(user_id))
-        filemenu.add_command(label="Exit", command=quit)
+        filemenu.add_command(label="Exit", command=sys.exit)
 
         tk.Tk.config(self, menu=filemenu)
 
@@ -54,6 +53,7 @@ class LoginInterface(tk.Tk):
 
         self.show_frame(Login)
 
+    # method for raising new pages (frames)
     def show_frame(self, cont):
         frame = self.frames[cont]
         frame.tkraise()
@@ -167,6 +167,12 @@ class CreateNew(tk.Frame):
                     self, text="name taken", style="my.TLabel"
                 )
                 self.failed.grid(row=5, column=1)
+
+        self.pw_reqs = ttk.Label(self, text="Password Requirements:\n"
+                                            "-- between 6 and 20 characters long\n"
+                                            "-- must have at least 1 uppercase and 1 lowercase\n"
+                                            "-- must have at least 1 number and 1 special character")
+        self.pw_reqs.grid(row=6, column=0, columnspan=2)
 
         self.done = ttk.Label(self)
         self.failed = ttk.Label(self)
@@ -323,6 +329,11 @@ class BookmarkAccess(tk.Frame):
             global user_id
             user_id = None
 
+        def delete_bookmark(event):
+            title = self.title_select.get("active")
+            db.delete_bookmark(title)
+            self.title_filtering()
+
         # hyperlink access
         def select_link(event):
             title = str(self.title_select.get("active")).strip("(' ',)")
@@ -333,7 +344,6 @@ class BookmarkAccess(tk.Frame):
         self.title_label = ttk.Label(self, text="Filter by Title: ")
         self.title_label.grid(row=0, column=0)
 
-        # title filter: entry box
         self.title_filter = ttk.Entry(self)
         self.title_filter.grid(row=1, column=0, padx=5, pady=10)
 
@@ -343,11 +353,10 @@ class BookmarkAccess(tk.Frame):
 
         self.title_filter.bind('<Return>', self.title_filtering)
 
-        self.title_button = ttk.Button(self, style='my.TButton', text="Filter Title",
+        self.title_button = ttk.Button(self, style='my.TButton', text="Filter by Title",
                                        command=self.title_filtering)
         self.title_button.grid(row=2, column=0, padx=5, pady=10)
 
-        # category filtering
         self.category_label = ttk.Label(self, text="Filter by Category: ")
         self.category_label.grid(row=0, column=2)
 
@@ -363,11 +372,6 @@ class BookmarkAccess(tk.Frame):
         open_selected = ttk.Button(self, style='my.TButton', text="Open Selected",
                                    command=lambda: select_link(Login))
         open_selected.grid(row=4, column=1, padx=5, pady=10)
-
-        def delete_bookmark(event):
-            title = self.title_select.get("active")
-            db.delete_bookmark(title)
-            self.title_filtering()
 
         delete_selected = ttk.Button(self, style='my.TButton', text="Delete Selected",
                                      command=lambda: delete_bookmark(Login))
@@ -391,7 +395,7 @@ class BookmarkAccess(tk.Frame):
 
         self.enter_bookmarks = ttk.Button(
             self,
-            text="Add Bookmark Page",
+            text="Add More Bookmarks",
             style="my.TButton",
             command=lambda: controller.show_frame(EntryForm),
         )
@@ -422,6 +426,7 @@ class Reports(tk.Frame):
 
         def logout(event):
             controller.show_frame(Login)
+            # resets all labels to be blank, preparing for next user to log in
             logoutvar = tk.StringVar()
             self.bookmark_count_label.config(textvariable=logoutvar)
             self.login_count_label.config(textvariable=logoutvar)
@@ -430,6 +435,7 @@ class Reports(tk.Frame):
             user_id = None
 
         def populate_report(event):
+            # configs are here to reset labels to accept the proper variables, after a logout
             self.bookmark_count_label.config(textvariable=bvar)
             self.login_count_label.config(textvariable=lvar)
             self.open_count_label.config(textvariable=ovar)
@@ -486,4 +492,5 @@ class Reports(tk.Frame):
 
 
 app = LoginInterface()
+app.resizable(False, False)
 app.mainloop()
