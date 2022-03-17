@@ -20,23 +20,15 @@ def report_table():
         pass
 
 
-def bookmark_report():
-    pass
-    # number of unique categories
-    # bookmarks per category
-
-
-def application_report(active_id):
-    pass
-    # total bookmarks opened
-
-
 def view_report_table():
     db.cursor.execute("SELECT rowid, * FROM reports")
     print(db.cursor.fetchall())
 
 
-# view_report_table()
+def count_user_bookmarks(active_id):
+    db.cursor.execute("SELECT rowid FROM bookmarks WHERE OwnerID=(?)", (active_id,))
+    count = len([x[0] for x in db.cursor.fetchall()])
+    return count
 
 
 def access_logging(active_id, count):
@@ -44,6 +36,7 @@ def access_logging(active_id, count):
     new_count = num[0] + count
     print(new_count)
     db.cursor.execute("UPDATE reports SET link_opens=(?) WHERE OwnerID=(?)", (new_count, active_id))
+    db.connection.commit()
 
 
 def show_access(active_id):

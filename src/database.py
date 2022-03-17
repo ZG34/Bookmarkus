@@ -2,6 +2,7 @@ import sqlite3
 import sqlite3 as sql
 import bcrypt
 import webbrowser
+from src.pwtesting import password_check
 
 
 # bcrypt password hashing
@@ -11,7 +12,7 @@ def hash_pw(password):
     return password_hashed
 
 
-# Generates database and tables, and holds all queries
+# Generates database and tables, and holds account creation +  bookmarking queries
 class Database:
     def __init__(self, *args, **kwargs):
         self.connection = sql.connect("accounts.db")
@@ -52,23 +53,6 @@ class Database:
         except sql.OperationalError:
             pass
 
-    def add_value(self, username, password):
-        self.cursor.execute("""INSERT INTO users VALUES (?,?)""", (username, password))
-        self.connection.commit()
-
-    def check_users(self, table="users"):
-        for row in self.cursor.execute(f"SELECT rowid, * FROM {table}"):
-            print(row)
-
-    def check_notes(self, active_id, table="notes"):
-        for row in self.cursor.execute(f"SELECT * FROM {table} WHERE OwnerID = {active_id}"):
-            print(row)
-
-    def check_category_list(self, active_id, table="category"):
-        print('checking category list')
-        for row in self.cursor.execute(f"SELECT rowid, * FROM {table} WHERE OwnerID = {active_id}"):
-            print(row)
-
     def login_func(self, password, username):
         self.cursor.execute("SELECT password FROM users WHERE username = (?)", (username,))
         result = str(self.cursor.fetchone()).strip("'(),")
@@ -82,14 +66,22 @@ class Database:
         except ValueError as e:
             print(e, " bad username")
 
+    def add_value(self, username, password):
+        self.cursor.execute("""INSERT INTO users VALUES (?,?)""", (username, password))
+        self.connection.commit()
+
     def complete_acct(self, username, password):
         if len(username) and len(password) != 0:
-            try:
-                self.add_value(username, (hash_pw(password)))
-                print("no issue")
-                return True
-            except sqlite3.IntegrityError as e:
-                print(e)
+            if password_check(password) is True:
+                try:
+                    self.add_value(username, (hash_pw(password)))
+                    self.connection.commit()
+                    print("no issue")
+                    return True
+                except sqlite3.IntegrityError as e:
+                    print(e)
+            else:
+                return 0
         else:
             print("len below 0")
             return False
@@ -100,8 +92,11 @@ class Database:
 
     def add_category(self, active_id, current_var):
         if len(current_var) != 0:
-            self.cursor.execute("INSERT INTO category (OwnerID,Data) VALUES (?,?)", (active_id, current_var,))
-            self.connection.commit()
+            try:
+                self.cursor.execute("INSERT INTO category (OwnerID,Data) VALUES (?,?)", (active_id, current_var,))
+                self.connection.commit()
+            except sqlite3.IntegrityError as e:
+                print(e)
         else:
             print("please enter a category")
             return False
@@ -119,10 +114,6 @@ class Database:
         else:
             print("nothing to bookmark")
             return False
-
-    def view_bookmark_table(self, active_id, table="bookmarks"):
-        for row in self.cursor.execute(f"SELECT rowid, * FROM {table} WHERE OwnerID = {active_id}"):
-            print(row)
 
     def remove_category(self, current_var):
         self.cursor.execute("DELETE FROM category WHERE Data=(?)", (current_var,))
@@ -146,39 +137,9 @@ class Database:
                             ('%'+param+'%', active_id,))
         return self.cursor.fetchall()
 
-    def bookmarks_by_link(self, active_id):
-        self.cursor.execute("SELECT Link FROM bookmarks WHERE OwnerID = (?)", (active_id,))
-        # raw = self.cursor.fetchall()
-        raw = ([x[0] for x in self.cursor.fetchall()])
-        for item in raw:
-            stripped = (str(item).strip("https://" + ".com" + "www." + "http://" + ".net"))
-            print(stripped)
-
-    def bookmarks_link_populate(self, active_id):
-        pass
-        # pull all URLs from database
-        # parse all URL for the source site (ex, www.youtube.com -> youtube)
-        # select only 1 instance of each unique source site
-        # populate combo box with 1 instance of each unique source site
-
-    def bookmarks_by_link_REAL(self, choice, active_id):
-        pass
-        # choice =  link_var.get()
-        # "SELECT Title FROM bookmarks WHERE Link LIKE (?) AND OwnerID=(?)", (choice, active_id,)
-
     def delete_bookmark(self, active_selection):
         self.cursor.execute("DELETE FROM bookmarks WHERE Title=(?)", (active_selection,))
-        # raw = self.cursor.fetchone()[0]
         self.connection.commit()
-
-    def print_all(self, table='bookmarks'):
-        self.cursor.execute(f"SELECT * FROM {table}")
-        print(self.cursor.fetchall())
-
-    def count_user_bookmarks(self, active_id):
-        self.cursor.execute("SELECT rowid FROM bookmarks WHERE OwnerID=(?)", (active_id,))
-        count = len([x[0] for x in self.cursor.fetchall()])
-        return count
 
 
 if __name__ == '__main__':

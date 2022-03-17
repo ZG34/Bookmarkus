@@ -4,6 +4,7 @@ import tkinter.ttk as ttk
 
 from src.database import Database
 import src.reporting as report
+import src.export as export
 
 report.report_table()
 db = Database()
@@ -35,8 +36,7 @@ class LoginInterface(tk.Tk):
 
         menubar = tk.Menu(container)
         filemenu = tk.Menu(menubar, tearoff=0)
-        filemenu.add_command(label="Import Bookmarks", command=lambda: print("placeholder: import bookmarks"))
-        filemenu.add_command(label="Export Bookmarks", command=lambda: print("placeholder: export bookmarks"))
+        filemenu.add_command(label="Export Bookmarks", command=lambda: export.export_bookmarks(user_id))
         filemenu.add_command(label="Exit", command=quit)
 
         tk.Tk.config(self, menu=filemenu)
@@ -119,21 +119,57 @@ class CreateNew(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
 
+        def home(event):
+            controller.show_frame(Login)
+            try:
+                self.done.destroy()
+                self.failed.destroy()
+            except AttributeError as e:
+                pass
+
         def create_account(event):
             if db.complete_acct(self.username.get(), self.password.get()) is True:
+                try:
+                    self.failed.destroy()
+                    self.done.destroy()
+                except AttributeError as e:
+                    pass
                 self.username.delete(0, tk.END), self.password.delete(0, tk.END)
                 self.done = ttk.Label(self, text="account created", style="my.TLabel")
                 self.done.grid(row=5, column=1)
             elif db.complete_acct(self.username.get(), self.password.get()) is False:
+                try:
+                    self.failed.destroy()
+                    self.done.destroy()
+                except AttributeError as e:
+                    pass
                 self.failed = ttk.Label(
                     self, text="missing info", style="my.TLabel"
                 )
                 self.failed.grid(row=5, column=1)
+            elif db.complete_acct(self.username.get(), self.password.get()) == 0:
+                try:
+                    self.failed.destroy()
+                    self.done.destroy()
+                except AttributeError as e:
+                    pass
+                self.failed = ttk.Label(
+                    self, text="bad password", style="my.TLabel"
+                )
+                self.failed.grid(row=5, column=1)
             else:
+                try:
+                    self.failed.destroy()
+                    self.done.destroy()
+                except AttributeError as e:
+                    pass
                 self.failed = ttk.Label(
                     self, text="name taken", style="my.TLabel"
                 )
                 self.failed.grid(row=5, column=1)
+
+        self.done = ttk.Label(self)
+        self.failed = ttk.Label(self)
 
         self.label0 = ttk.Label(self, text="New Account")
         self.label0.grid(row=0, column=0, padx=40, pady=10)
@@ -160,7 +196,7 @@ class CreateNew(tk.Frame):
             self,
             text="Go to Login",
             style="my.TButton",
-            command=lambda: controller.show_frame(Login),
+            command=lambda: home(Login),
         )
         self.home.grid(row=5, column=2, padx=5, pady=5)
 
@@ -179,6 +215,7 @@ class EntryForm(tk.Frame):
             controller.show_frame(BookmarkAccess)
 
         def add_bookmark(event):
+            add_and_update_categories(Login)
             if db.commit_bookmark(user_id, self.title.get(), self.link.get(), current_var.get(), ) is False:
                 self.failed_commit = ttk.Label(self, text="An entry field is missing!")
                 self.failed_commit.grid(row=7, column=0)
@@ -226,14 +263,6 @@ class EntryForm(tk.Frame):
         self.category['state'] = 'normal'
         self.category.grid(row=1, column=2, padx=5, pady=10)
 
-        self.save_category = ttk.Button(
-            self,
-            text="Add New Category",
-            style="my.TButton",
-            command=lambda: add_and_update_categories(Login),
-        )
-        self.save_category.grid(row=2, column=2, padx=5, pady=10)
-
         self.view_bookmarks = ttk.Button(
             self,
             text="View Bookmarks",
@@ -248,7 +277,7 @@ class EntryForm(tk.Frame):
             style="my.TButton",
             command=lambda: add_bookmark(Login),
         )
-        self.commit_new_bookmark.grid(row=2, column=1, padx=5, pady=10)
+        self.commit_new_bookmark.grid(row=2, column=0, padx=5, pady=10, columnspan=3, sticky='ew')
 
         self.delete_category = ttk.Button(
             self,
@@ -280,6 +309,7 @@ class EntryForm(tk.Frame):
         self.category['values'] = ([x[0] for x in db.category_populate(user_id)])
 
 
+# view, filter, and access bookmarks
 class BookmarkAccess(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -330,23 +360,6 @@ class BookmarkAccess(tk.Frame):
                                           command=self.category_filtering)
         self.filter_category.grid(row=2, column=2, padx=5, pady=10)
 
-        # # link filter: combobox with the parsed sites currently in the database?
-        # self.link_label = ttk.Label(self, text="Filter by Source: ")
-        # self.link_label.grid(row=0, column=1)
-        #
-        # link_var = tk.StringVar()
-        # self.link = ttk.Combobox(self, textvariable=link_var)
-        #
-        # def link_populate(event):
-        #     self.link['values'] = db.bookmarks_by_link(user_id)  # FIXME
-        #
-        # self.link['state'] = 'readonly'
-        # self.link.grid(row=1, column=1, padx=5, pady=10)
-        #
-        # link_filter = ttk.Button(self, style="my.TButton", text="Filter by Source",
-        #                          command=lambda: link_populate(Login))
-        # link_filter.grid(row=2, column=1, padx=5, pady=10)
-
         open_selected = ttk.Button(self, style='my.TButton', text="Open Selected",
                                    command=lambda: select_link(Login))
         open_selected.grid(row=4, column=1, padx=5, pady=10)
@@ -384,7 +397,6 @@ class BookmarkAccess(tk.Frame):
         )
         self.enter_bookmarks.grid(row=4, column=0, padx=5, pady=10)
 
-        # TODO make use of this method in each class, to get a clean refresh or update.
         self.bind('<<Raised>>', self.title_filtering, add="+")
         self.bind('<<Raised>>', self.category_pop, add="+")
 
@@ -403,6 +415,7 @@ class BookmarkAccess(tk.Frame):
         self.category['values'] = ([x[0] for x in db.category_populate(user_id)])
 
 
+# landing page after login, allows all other pages to be viewed as well as a simple report to be generated
 class Reports(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -420,7 +433,7 @@ class Reports(tk.Frame):
             self.bookmark_count_label.config(textvariable=bvar)
             self.login_count_label.config(textvariable=lvar)
             self.open_count_label.config(textvariable=ovar)
-            bvar.set(f"You have\n --{db.count_user_bookmarks(user_id)}-- \ntotal bookmarks")
+            bvar.set(f"You have\n --{report.count_user_bookmarks(user_id)}-- \ntotal bookmarks")
             lvar.set(f"Logged in\n --{report.login_count(user_id)}-- \ntotal times")
             ovar.set(f"Accessed bookmarks\n --{report.show_access(user_id)}-- \ntimes")
 
@@ -430,7 +443,7 @@ class Reports(tk.Frame):
             style="my.TButton",
             command=lambda: controller.show_frame(EntryForm),
         )
-        self.go_entry.grid(row=0, column=0, padx=5, pady=10)
+        self.go_entry.grid(row=0, column=0, padx=5, pady=10, columnspan=2, sticky='ew')
 
         self.view_bookmarks = ttk.Button(
             self,
@@ -438,7 +451,7 @@ class Reports(tk.Frame):
             style="my.TButton",
             command=lambda: controller.show_frame(BookmarkAccess),
         )
-        self.view_bookmarks.grid(row=0, column=1, padx=5, pady=10)
+        self.view_bookmarks.grid(row=1, column=0, padx=5, pady=10, columnspan=2, sticky='ew')
 
         self.generate_report = ttk.Button(
             self,
@@ -446,19 +459,22 @@ class Reports(tk.Frame):
             style="my.TButton",
             command=lambda: populate_report(Login),
         )
-        self.generate_report.grid(row=4, column=1, padx=5, pady=10)
+        self.generate_report.grid(row=4, column=0, padx=5, pady=10, columnspan=3, sticky='ew')
 
         bvar = tk.StringVar()
-        self.bookmark_count_label = ttk.Label(self, textvariable=bvar)
-        self.bookmark_count_label.grid(row=2, column=0, padx=5, pady=10)
+        self.bookmark_count_label = ttk.Label(self, textvariable=bvar, borderwidth=1, relief='ridge', anchor='center',
+                                              width=20)
+        self.bookmark_count_label.grid(row=2, column=0, padx=5, pady=10, ipadx=3, ipady=3)
 
         lvar = tk.StringVar()
-        self.login_count_label = ttk.Label(self, textvariable=lvar)
-        self.login_count_label.grid(row=2, column=1, padx=5, pady=10)
+        self.login_count_label = ttk.Label(self, textvariable=lvar, borderwidth=1, relief='ridge', anchor='center',
+                                           width=20)
+        self.login_count_label.grid(row=2, column=1, padx=5, pady=10, ipadx=3, ipady=3)
 
         ovar = tk.StringVar()
-        self.open_count_label = ttk.Label(self, textvariable=ovar)
-        self.open_count_label.grid(row=2, column=2, padx=5, pady=10)
+        self.open_count_label = ttk.Label(self, textvariable=ovar, borderwidth=1, relief='ridge', anchor='center',
+                                          width=20)
+        self.open_count_label.grid(row=2, column=2, padx=5, pady=10, ipadx=3, ipady=3)
 
         self.logout = ttk.Button(
             self,
@@ -466,7 +482,7 @@ class Reports(tk.Frame):
             style="my.TButton",
             command=lambda: logout(Login),
         )
-        self.logout.grid(row=4, column=0, padx=5, pady=10)
+        self.logout.grid(row=5, column=1, padx=5, pady=10)
 
 
 app = LoginInterface()
