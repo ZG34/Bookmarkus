@@ -33,7 +33,7 @@ class Database:
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS category
                 (OwnerID INTEGER NOT NULL,
-                Data TEXT NOT NULL UNIQUE)
+                Data TEXT NOT NULL)
                 ;"""
             )
             self.connection.commit()
